@@ -87,6 +87,7 @@ be deprecated eventually.
 - [#1827](https://github.com/influxdata/telegraf/issues/1827): Fix Windows Performance Counters multi instance identifier
 - [#2576](https://github.com/influxdata/telegraf/pull/2576): Add write timeout to Riemann output
 
+- [#2474](https://github.com/influxdata/telegraf/issues/1232): Remove -K option from useradd call in the post-installation script.
 
 ## v1.2.1 [2017-02-01]
 

@@ -11,13 +11,18 @@ function install_init {
 }
 
 function install_systemd {
-    cp -f $SCRIPT_DIR/telegraf.service /lib/systemd/system/telegraf.service
+    if [[ -f /etc/SuSE-release ]]; then
+        # SLES/OpenSUSE logic
+        cp -f $SCRIPT_DIR/telegraf.service /etc/systemd/system/telegraf.service
+    else
+        cp -f $SCRIPT_DIR/telegraf.service /lib/systemd/system/telegraf.service
+    fi
     systemctl enable telegraf || true
     systemctl daemon-reload || true
 }
 
 function install_update_rcd {
-    update-rc.d telegraf defaults
+    which update-rc.d &>/dev/null && update-rc.d telegraf defaults
 }
 
 function install_chkconfig {
@@ -26,12 +31,16 @@ function install_chkconfig {
 
 id telegraf &>/dev/null
 if [[ $? -ne 0 ]]; then
+    # telegraf user does not exist, create user
+
+    # check for telegraf group
     grep "^telegraf:" /etc/group &>/dev/null
     if [[ $? -ne 0 ]]; then
-        useradd -r -K USERGROUPS_ENAB=yes -M telegraf -s /bin/false -d /etc/telegraf
-    else
-        useradd -r -K USERGROUPS_ENAB=yes -M telegraf -s /bin/false -d /etc/telegraf -g telegraf
+        # telegraf group does not exist, create group
+        groupadd telegraf
     fi
+    
+    useradd -r -M telegraf -s /bin/false -d /etc/telegraf -g telegraf
 fi
 
 test -d $LOG_DIR || mkdir -p $LOG_DIR
@@ -78,7 +87,19 @@ elif [[ -f /etc/debian_version ]]; then
 	    # Assuming sysv
 	    install_init
 	    install_update_rcd
-	    invoke-rc.d telegraf restart
+	    which invoke-rc.d &>/dev/null && invoke-rc.d telegraf restart
+    fi
+elif [[ -f /etc/SuSE-release ]]; then
+    # SLES/OpenSUSE logic
+    which systemctl &>/dev/null
+    if [[ $? -eq 0 ]]; then
+	    install_systemd
+	    systemctl restart telegraf || echo "WARNING: systemd not running."
+    else
+	    # Assuming sysv
+	    install_init
+	    install_update_rcd
+	    which invoke-rc.d &>/dev/null && invoke-rc.d telegraf restart
     fi
 elif [[ -f /etc/os-release ]]; then
     source /etc/os-release
