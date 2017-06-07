@@ -86,8 +86,8 @@ docker-run-circle:
 
 # Kill all docker containers, ignore errors
 docker-kill:
-	-docker kill nsq aerospike redis rabbitmq postgres memcached mysql zookeeper kafka mqtt riemann nats elasticsearch
-	-docker rm nsq aerospike redis rabbitmq postgres memcached mysql zookeeper kafka mqtt riemann nats elasticsearch
+	-docker kill nsq aerospike redis rabbitmq postgres memcached mysql zookeeper kafka kafka_legacy mqtt riemann nats elasticsearch
+	-docker rm nsq aerospike redis rabbitmq postgres memcached mysql zookeeper kafka kafka_legacy mqtt riemann nats elasticsearch
 
 # Run full unit tests using docker containers (includes setup and teardown)
 test: vet docker-kill docker-run

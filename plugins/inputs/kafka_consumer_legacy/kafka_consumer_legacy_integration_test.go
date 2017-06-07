@@ -18,8 +18,10 @@ func TestReadsMetricsFromKafka(t *testing.T) {
 		t.Skip("Skipping integration test in short mode")
 	}
 
-	brokerPeers := []string{testutil.GetLocalHost() + ":9092"}
-	zkPeers := []string{testutil.GetLocalHost() + ":2181"}
+	t.Skip("Skipping test due to circleci issue; ref #2487")
+
+	brokerPeers := []string{testutil.GetLocalHost() + ":9093"}
+	zkPeers := []string{testutil.GetLocalHost() + ":2182"}
 	testTopic := fmt.Sprintf("telegraf_test_topic_legacy_%d", time.Now().Unix())
 
 	// Send a Kafka message to the kafka host
