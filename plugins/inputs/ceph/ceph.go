@@ -494,6 +494,9 @@ func decodeOsdPoolStats(acc telegraf.Accumulator, input string) error {
 		return fmt.Errorf("failed to parse json: '%s': %v", input, err)
 	}
 
+	acc.AddFields("ceph_pool_state", map[string]interface{}{"pool_count": float64(len(data))}, map[string]string{})
+
+
 	// ceph.pool.stats: records pre pool IO and recovery throughput
 	for _, pool := range data {
 		pool_name, ok := pool["pool_name"].(string)
