@@ -127,6 +127,7 @@ func (c *Ceph) gatherClusterStats(acc telegraf.Accumulator) error {
 		{"df", decodeDf},
 		{"osd pool stats", decodeOsdPoolStats},
 		{"mon_status", decodeMonStatus},
+		{"osd tree", decodeClusterTopology},
 	}
 
 	// For each job, execute against the cluster, parse and accumulate the data points
@@ -317,6 +318,53 @@ func (c *Ceph) exec(command string) (string, error) {
 
 	return output, nil
 }
+func decodeClusterTopology(acc telegraf.Accumulator, input string) error {
+	data := make(map[string]interface{})
+	err := json.Unmarshal([]byte(input), &data)
+	if err != nil {
+		return fmt.Errorf("failed to parse json: '%s': %v", input, err)
+	}
+
+	err = decodeClusterHostCount(acc, data)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+func decodeClusterHostCount(acc telegraf.Accumulator, data map[string]interface{}) error {
+	n, ok := data["nodes"]
+	if !ok {
+		return fmt.Errorf("WARNING %s - unable to decode osd tree", measurement)
+	}
+
+	nodes, ok := n.([]interface{})
+	if !ok {
+		return fmt.Errorf("WARNING %s - unable to decode osd tree", measurement)
+	}
+	hostcount := 0.0
+
+	for _, item := range nodes {
+		node, ok := item.(map[string]interface{})
+		if !ok {
+			return fmt.Errorf("WARNING %s - unable to decode osd tree node", measurement)
+		}
+
+		nodetype, ok := node["type"]
+		if !ok {
+			return fmt.Errorf("WARNING %s - osdtree is missing the %s field", measurement, "type")
+		}
+
+		if nodetype == "host" {
+			hostcount = hostcount + 1
+		}
+	}
+
+	acc.AddFields("ceph_osd_tree", map[string]interface{}{"total_host_count": hostcount}, map[string]string{})
+
+	return nil
+}
+
 func decodeMonStatus(acc telegraf.Accumulator, input string) error {
 	data := make(map[string]interface{})
 	err := json.Unmarshal([]byte(input), &data)
