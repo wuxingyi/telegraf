@@ -424,8 +424,51 @@ func decodeStatus(acc telegraf.Accumulator, input string) error {
 		return err
 	}
 
+	err = decodeStatusHealthDetail(acc, data)
+	if err != nil {
+		return err
+	}
+
 	return nil
 
+}
+
+func decodeStatusHealthDetail(acc telegraf.Accumulator, data map[string]interface{}) error {
+	health, ok := data["health"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("WARNING %s - unable to decode healthinfo", measurement)
+	}
+
+	overall_status, ok := health["overall_status"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("WARNING %s - unable to decode overall_status", measurement)
+	}
+	acc.AddFields("ceph_healthinfo", map[string]interface{}{"overall_status": overall_status}, map[string]string{})
+
+	summary, ok := health["overall_status"].([]interface{})
+	if !ok {
+		return fmt.Errorf("WARNING %s - unable to decode health_summary", measurement)
+	}
+
+	summarystring := ""
+	if len(summary) > 0 {
+		for _, item := range summary {
+			string, ok := item.(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("WARNING %s - unable to decode osd tree node", measurement)
+			}
+
+			s, ok := node["summary"]
+			if !ok {
+				return fmt.Errorf("WARNING %s - osdtree is missing the %s field", measurement, "summary")
+			}
+			summarystring = summarystring + s + ", "
+		}
+	}
+
+	acc.AddFields("ceph_healthinfo", map[string]interface{}{"ceph_health_summary": summarystring}, map[string]string{})
+
+	return nil
 }
 
 func decodeStatusOsdmap(acc telegraf.Accumulator, data map[string]interface{}) error {
