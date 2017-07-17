@@ -126,6 +126,7 @@ func (c *Ceph) gatherClusterStats(acc telegraf.Accumulator) error {
 		{"status", decodeStatus},
 		{"df", decodeDf},
 		{"osd pool stats", decodeOsdPoolStats},
+		{"mon_status", decodeMonStatus},
 	}
 
 	// For each job, execute against the cluster, parse and accumulate the data points
@@ -316,6 +317,42 @@ func (c *Ceph) exec(command string) (string, error) {
 
 	return output, nil
 }
+func decodeMonStatus(acc telegraf.Accumulator, input string) error {
+	data := make(map[string]interface{})
+	err := json.Unmarshal([]byte(input), &data)
+	if err != nil {
+		return fmt.Errorf("failed to parse json: '%s': %v", input, err)
+	}
+
+	err = decodeMonStatusMonmap(acc, data)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func decodeMonStatusMonmap(acc telegraf.Accumulator, data map[string]interface{}) error {
+	monmap, ok := data["monmap"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("WARNING %s - unable to decode monmap", measurement)
+	}
+	m, ok := monmap["mons"]
+	if !ok {
+		return fmt.Errorf("WARNING %s - unable to decode monmap", measurement)
+	}
+
+	mons, ok := m.([]interface{})
+	acc.AddFields("ceph_monmap", map[string]interface{}{"total_mon_count": float64(len(mons))}, map[string]string{})
+
+	quorummons, ok := data["quorum"].([]interface{})
+	if !ok {
+		return fmt.Errorf("WARNING %s - unable to decode monmap", measurement)
+	}
+
+	acc.AddFields("ceph_monmap", map[string]interface{}{"down_mon_count": float64(len(mons)) - float64(len(quorummons))}, map[string]string{})
+	return nil
+}
 
 func decodeStatus(acc telegraf.Accumulator, input string) error {
 	data := make(map[string]interface{})
@@ -340,6 +377,7 @@ func decodeStatus(acc telegraf.Accumulator, input string) error {
 	}
 
 	return nil
+
 }
 
 func decodeStatusOsdmap(acc telegraf.Accumulator, data map[string]interface{}) error {
@@ -495,7 +533,6 @@ func decodeOsdPoolStats(acc telegraf.Accumulator, input string) error {
 	}
 
 	acc.AddFields("ceph_pool_state", map[string]interface{}{"pool_count": float64(len(data))}, map[string]string{})
-
 
 	// ceph.pool.stats: records pre pool IO and recovery throughput
 	for _, pool := range data {
