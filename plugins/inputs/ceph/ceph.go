@@ -453,12 +453,12 @@ func decodeStatusHealthDetail(acc telegraf.Accumulator, data map[string]interfac
 	summarystring := ""
 	if len(summary) > 0 {
 		for _, item := range summary {
-			string, ok := item.(map[string]interface{})
+			sm, ok := item.(map[string]interface{})
 			if !ok {
 				return fmt.Errorf("WARNING %s - unable to decode osd tree node", measurement)
 			}
 
-			s, ok := node["summary"]
+			s, ok := sm["summary"].(string)
 			if !ok {
 				return fmt.Errorf("WARNING %s - osdtree is missing the %s field", measurement, "summary")
 			}
