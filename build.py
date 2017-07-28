@@ -224,9 +224,10 @@ def increment_minor_version(version):
 def get_current_version_tag():
     """Retrieve the raw git version tag.
     """
-    commitlen = str(len(run('git log --oneline')))
+    commitlen = str(run('git log --oneline').count('\n'))
     version = run('git rev-parse --short HEAD')
-    return commitlen + "-" + version
+    print commitlen + "-" + version
+    return "1.3.4-"+ commitlen + "-" + version
 
 def get_current_version():
     """Parse version information from git tag output.
